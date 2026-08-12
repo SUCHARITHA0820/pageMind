@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Mail, KeyRound, Lock, ArrowLeft, CheckCircle2, ShieldCheck, AlertCircle, Copy, Check } from 'lucide-react';
+import { Mail, KeyRound, Lock, ArrowLeft, CheckCircle2, ShieldCheck } from 'lucide-react';
 
 export default function ForgotPassword() {
   const { t } = useTranslation();
@@ -10,8 +10,6 @@ export default function ForgotPassword() {
   const [step, setStep] = useState(1); // Step 1: Request, Step 2: Verify Code, Step 3: Set New Password
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
-  const [devFallbackCode, setDevFallbackCode] = useState(null);
-  const [copied, setCopied] = useState(false);
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -33,12 +31,6 @@ export default function ForgotPassword() {
       const data = await response.json();
 
       if (response.ok) {
-        if (data.devFallbackCode) {
-          setDevFallbackCode(data.devFallbackCode);
-        } else {
-          setDevFallbackCode(null);
-        }
-        // Keep input empty for user to type into normally
         setCode('');
         setStep(2);
       } else {
@@ -46,19 +38,10 @@ export default function ForgotPassword() {
       }
     } catch (err) {
       // Mock fallback for offline local testing
-      setDevFallbackCode('123456');
       setCode('');
       setStep(2);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleCopyCode = () => {
-    if (devFallbackCode) {
-      navigator.clipboard.writeText(devFallbackCode);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
     }
   };
 
@@ -197,64 +180,19 @@ export default function ForgotPassword() {
         {/* Step 2 Form: Enter Verification Code */}
         {step === 2 && (
           <form onSubmit={handleVerifyCode}>
-            {devFallbackCode ? (
-              <div style={{
-                background: 'rgba(245, 158, 11, 0.12)',
-                border: '1px solid rgba(245, 158, 11, 0.35)',
-                borderRadius: '12px',
-                padding: '16px',
-                marginBottom: '20px',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '10px'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
-                  <AlertCircle size={20} color="#fbbf24" style={{ flexShrink: 0, marginTop: '2px' }} />
-                  <div style={{ flex: 1, fontSize: '0.86rem', color: '#fef3c7', lineHeight: '1.4' }}>
-                    <strong>Development Mode Fallback:</strong> Email delivery is unavailable in this environment. Your verification code is:
-                    <span style={{ display: 'inline-block', background: 'rgba(0, 0, 0, 0.4)', padding: '2px 8px', borderRadius: '4px', marginLeft: '6px', fontFamily: 'monospace', fontWeight: 'bold', fontSize: '1rem', color: '#fbbf24', letterSpacing: '2px' }}>
-                      {devFallbackCode}
-                    </span>
-                  </div>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                  <button
-                    type="button"
-                    onClick={handleCopyCode}
-                    style={{
-                      background: copied ? 'rgba(16, 185, 129, 0.25)' : 'rgba(245, 158, 11, 0.25)',
-                      border: copied ? '1px solid #10b981' : '1px solid #f59e0b',
-                      color: copied ? '#6ee7b7' : '#fbbf24',
-                      borderRadius: '6px',
-                      padding: '6px 12px',
-                      fontSize: '0.8rem',
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      transition: 'all 0.2s ease'
-                    }}
-                  >
-                    {copied ? <Check size={14} /> : <Copy size={14} />}
-                    <span>{copied ? 'Copied!' : 'Copy Code'}</span>
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div style={{
-                background: 'rgba(59, 130, 246, 0.12)',
-                border: '1px solid rgba(59, 130, 246, 0.3)',
-                borderRadius: '10px',
-                padding: '14px',
-                marginBottom: '20px',
-                fontSize: '0.86rem',
-                color: '#93c5fd',
-                textAlign: 'center'
-              }}>
-                Check your email ({email}) for your 6-digit verification code.
-              </div>
-            )}
+            <div style={{
+              background: 'rgba(59, 130, 246, 0.12)',
+              border: '1px solid rgba(59, 130, 246, 0.3)',
+              borderRadius: '10px',
+              padding: '14px',
+              marginBottom: '20px',
+              fontSize: '0.86rem',
+              color: '#93c5fd',
+              textAlign: 'center',
+              lineHeight: '1.4'
+            }}>
+              We've sent a 6-digit code to your email{email ? ` (${email})` : ''}. Please check your inbox.
+            </div>
 
             <div className="input-group">
               <label className="input-label">{t('auth.code_label')}</label>
