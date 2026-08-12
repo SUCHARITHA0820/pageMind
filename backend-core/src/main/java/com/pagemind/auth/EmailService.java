@@ -17,7 +17,7 @@ public class EmailService {
     @Value("${spring.mail.username:noreply@pagemind.com}")
     private String fromEmail;
 
-    public void sendPasswordResetEmail(String toEmail, String code) {
+    public boolean sendPasswordResetEmail(String toEmail, String code) {
         try {
             SimpleMailMessage message = new SimpleMailMessage();
             message.setFrom(fromEmail);
@@ -28,9 +28,11 @@ public class EmailService {
                     "If you did not request this, please ignore this email.");
             mailSender.send(message);
             log.info("Password reset email sent successfully to {}", toEmail);
+            return true;
         } catch (Exception e) {
             log.error("Failed to send email to {}: {}", toEmail, e.getMessage());
             log.info("LOCAL DEV FALLBACK - Password reset code for {}: {}", toEmail, code);
+            return false;
         }
     }
 }

@@ -112,9 +112,14 @@ public class AuthController {
                 .build();
 
         resetCodeRepository.save(resetCode);
-        emailService.sendPasswordResetEmail(user.getEmail(), code);
+        boolean emailSent = emailService.sendPasswordResetEmail(user.getEmail(), code);
+        String devFallbackCode = emailSent ? null : code;
 
-        return ResponseEntity.ok(new ApiResponse(true, "Password reset code sent to your email."));
+        return ResponseEntity.ok(ApiResponse.builder()
+                .success(true)
+                .message("Password reset code sent to your email.")
+                .devFallbackCode(devFallbackCode)
+                .build());
     }
 
     @PostMapping("/verify-code")
@@ -172,5 +177,34 @@ public class AuthController {
         resetCodeRepository.deleteByUserId(user.getId());
 
         return ResponseEntity.ok(new ApiResponse(true, "Password has been reset successfully."));
+    }
+
+    @PostMapping("/google")
+    public ResponseEntity<?> googleLogin(@Valid @RequestBody GoogleLoginRequest request) {
+        String email = request.getEmail();
+        String name = request.getName() != null ? request.getName() : email;
+
+        User user = userRepository.findByEmail(email).orElseGet(() -> {
+            User newUser = User.builder()
+                    .name(name)
+                    .email(email)
+                    .passwordHash(null)
+                    .authProvider(AuthProvider.google)
+                    .preferredLanguage("en")
+                    .build();
+            return userRepository.save(newUser);
+        });
+
+        String token = tokenProvider.generateToken(user.getEmail());
+
+        AuthResponse response = AuthResponse.builder()
+                .token(token)
+                .userId(user.getId())
+                .name(user.getName())
+                .email(user.getEmail())
+                .preferredLanguage(user.getPreferredLanguage())
+                .build();
+
+        return ResponseEntity.ok(response);
     }
 }

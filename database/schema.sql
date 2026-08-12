@@ -42,10 +42,15 @@ CREATE TABLE IF NOT EXISTS books (
     description TEXT DEFAULT NULL,
     cover_url TEXT DEFAULT NULL,
     buy_links_json JSON DEFAULT NULL,
+    published_year INT DEFAULT NULL,
+    rating DECIMAL(2,1) DEFAULT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uq_title_author UNIQUE (title, author),
     INDEX idx_books_title (title),
     INDEX idx_books_genre (genre)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+ALTER TABLE books ADD CONSTRAINT uq_title_author UNIQUE (title, author);
 
 -- --------------------------------------------------------
 -- Table: user_book_likes

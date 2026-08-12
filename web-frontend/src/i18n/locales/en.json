@@ -1,0 +1,75 @@
+{
+  "nav": {
+    "brand": "PageMind",
+    "home": "Home",
+    "chatbot": "AI Chatbot",
+    "profile": "Profile",
+    "login": "Login",
+    "signup": "Sign Up",
+    "logout": "Logout"
+  },
+  "auth": {
+    "welcome_back": "Welcome Back to PageMind",
+    "create_account": "Create Your Account",
+    "forgot_password": "Forgot Password?",
+    "forgot_password_title": "Reset Your Password",
+    "forgot_password_desc": "Follow the steps below to securely reset your password.",
+    "step_1_title": "Step 1: Enter Email",
+    "step_2_title": "Step 2: Enter Verification Code",
+    "step_3_title": "Step 3: Set New Password",
+    "code_label": "6-Digit Verification Code",
+    "code_placeholder": "123456",
+    "new_password_label": "New Password",
+    "confirm_password_label": "Confirm New Password",
+    "email_label": "Email Address",
+    "email_placeholder": "you@example.com",
+    "password_label": "Password",
+    "password_placeholder": "••••••••",
+    "name_label": "Full Name",
+    "name_placeholder": "Jane Doe",
+    "login_button": "Log In",
+    "signup_button": "Sign Up",
+    "send_reset_link": "Send Verification Code",
+    "verify_code_button": "Verify Code",
+    "reset_password_button": "Reset Password",
+    "google_login": "Continue with Google",
+    "no_account": "Don't have an account?",
+    "already_account": "Already have an account?",
+    "back_to_login": "Back to Login",
+    "password_reset_success": "Your password has been successfully reset! You can now log in."
+  },
+  "language_select": {
+    "title": "Select Your Preferred Language",
+    "subtitle": "Choose the language you prefer for your PageMind reading companion interface.",
+    "english": "English",
+    "telugu": "తెలుగు (Telugu)",
+    "save_continue": "Save & Continue"
+  },
+  "home": {
+    "hero_title": "Discover Books Tailored to Your Mind",
+    "hero_subtitle": "Explore our curated catalog, filter by genre, and save your favorite books.",
+    "filter_all": "All Genres",
+    "search_placeholder": "Search books by title, author, or genre...",
+    "liked": "Liked",
+    "like": "Like"
+  },
+  "chatbot": {
+    "title": "AI Book Recommendation Companion",
+    "subtitle": "Tell us how you are feeling or what you want to read, and our agent will analyze your mood to recommend books.",
+    "input_placeholder": "e.g., 'I feel anxious and want something calming' or 'I want an epic space thriller'",
+    "submit_button": "Get Recommendations",
+    "detected_mood": "Detected Mood",
+    "detected_genre": "Detected Genre",
+    "recommended_books": "Recommended Books",
+    "retailer_links": "Retailer Search Links",
+    "buy_amazon": "Amazon India",
+    "buy_flipkart": "Flipkart"
+  },
+  "profile": {
+    "title": "My Account Profile",
+    "preferred_language": "Preferred Interface Language",
+    "liked_books": "My Liked Books",
+    "no_liked_books": "You haven't liked any books yet.",
+    "save_changes": "Save Language Preference"
+  }
+}

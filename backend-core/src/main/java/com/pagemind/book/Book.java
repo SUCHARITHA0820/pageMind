@@ -10,10 +10,15 @@ import org.hibernate.annotations.CreationTimestamp;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "books", indexes = {
-    @Index(name = "idx_books_title", columnList = "title"),
-    @Index(name = "idx_books_genre", columnList = "genre")
-})
+@Table(name = "books", 
+    uniqueConstraints = {
+        @UniqueConstraint(name = "uq_title_author", columnNames = {"title", "author"})
+    },
+    indexes = {
+        @Index(name = "idx_books_title", columnList = "title"),
+        @Index(name = "idx_books_genre", columnList = "genre")
+    }
+)
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -41,6 +46,12 @@ public class Book {
 
     @Column(name = "buy_links_json", columnDefinition = "JSON")
     private String buyLinksJson;
+
+    @Column(name = "published_year")
+    private Integer publishedYear;
+
+    @Column(name = "rating", columnDefinition = "DECIMAL(2,1)")
+    private Double rating;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
