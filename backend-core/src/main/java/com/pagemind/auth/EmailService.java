@@ -14,7 +14,7 @@ public class EmailService {
 
     private final JavaMailSender mailSender;
 
-    @Value("${spring.mail.username:noreply@pagemind.com}")
+    @Value("${spring.mail.username:pagemind0@gmail.com}")
     private String fromEmail;
 
     public boolean sendPasswordResetEmail(String toEmail, String code) {
@@ -30,8 +30,32 @@ public class EmailService {
             log.info("Password reset email sent successfully to {}", toEmail);
             return true;
         } catch (Exception e) {
-            log.error("Failed to send email to {}: {}", toEmail, e.getMessage());
+            log.error("Failed to send email to {}: {}", toEmail, e.getMessage(), e);
             log.info("LOCAL DEV FALLBACK - Password reset code for {}: {}", toEmail, code);
+            return false;
+        }
+    }
+
+    public boolean sendWelcomeEmail(String toEmail, String userName) {
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setFrom(fromEmail);
+            message.setTo(toEmail);
+            message.setSubject("Welcome to PageMind! 📚✨");
+            message.setText("Hello " + (userName != null && !userName.isBlank() ? userName : "Reader") + ",\n\n" +
+                    "Welcome to PageMind! We are thrilled to have you join our book discovery community.\n\n" +
+                    "With PageMind, you can:\n" +
+                    "• Explore hundreds of curated books across all genres\n" +
+                    "• Save your favorite books to your personal profile\n" +
+                    "• Chat with our AI Companion for personalized book recommendations\n\n" +
+                    "Happy Reading!\n\n" +
+                    "Best regards,\n" +
+                    "The PageMind Team");
+            mailSender.send(message);
+            log.info("Welcome notification email sent successfully to {}", toEmail);
+            return true;
+        } catch (Exception e) {
+            log.error("Failed to send welcome email to {}: {}", toEmail, e.getMessage());
             return false;
         }
     }

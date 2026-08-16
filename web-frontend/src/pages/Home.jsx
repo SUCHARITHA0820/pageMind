@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
-import { Heart, Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Heart, Search, ChevronLeft, ChevronRight, WifiOff } from 'lucide-react';
 import BookCover from '../components/BookCover';
+import { getFallbackBooks } from '../data/fallbackBooks';
 
 const ALL_GENRES = [
   'Fiction', 'Mystery', 'Thriller', 'Romance', 'Fantasy',
@@ -25,6 +26,7 @@ export default function Home() {
   const [totalPages, setTotalPages] = useState(0);
   const [totalElements, setTotalElements] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [isOffline, setIsOffline] = useState(false);
 
   useEffect(() => {
     fetchBooks(currentPage, selectedGenre, searchQuery);
@@ -71,15 +73,26 @@ export default function Home() {
           setTotalElements(data.totalElements || 0);
           setTotalPages(data.totalPages || 0);
           setCurrentPage(data.currentPage !== undefined ? data.currentPage : page);
+          setIsOffline(false);
+          return;
         } else if (Array.isArray(data)) {
           setBooks(data);
           setTotalElements(data.length);
           setTotalPages(1);
           setCurrentPage(0);
+          setIsOffline(false);
+          return;
         }
       }
+      throw new Error(`Server returned ${res.status}`);
     } catch (e) {
-      console.error("Failed to fetch books from API:", e);
+      console.warn("API unavailable, loading fallback catalog:", e);
+      const fallbacks = getFallbackBooks(genre, search);
+      setBooks(fallbacks);
+      setTotalElements(fallbacks.length);
+      setTotalPages(1);
+      setCurrentPage(0);
+      setIsOffline(true);
     } finally {
       setLoading(false);
     }
@@ -96,7 +109,7 @@ export default function Home() {
         const data = await res.json();
         console.log('[Home] GET /api/user/likes returned payload:', data);
         if (Array.isArray(data)) {
-          const ids = new Set(data.map(b => b.id || b.bookId));
+          const ids = new Set(data.map(b => Number(b.id || b.bookId)));
           setLikedBookIds(ids);
         }
       } else {
@@ -109,58 +122,48 @@ export default function Home() {
 
   const toggleLike = async (e, bookId) => {
     e.stopPropagation();
+    const numericId = Number(bookId);
+
     if (!token) {
-      console.warn(`[Home] Toggle like called for bookId ${bookId} but user is not logged in. Redirecting to login.`);
+      alert("Please log in to like books and save them to your profile!");
       navigate('/login');
       return;
     }
 
-    const isLiked = likedBookIds.has(bookId);
-    console.log(`[Home] Toggling like for bookId ${bookId}. Action: ${isLiked ? 'UNLIKE' : 'LIKE'}`);
+    const isLiked = likedBookIds.has(numericId);
+    console.log(`[Home] Toggling like for bookId ${numericId}. Action: ${isLiked ? 'UNLIKE' : 'LIKE'}`);
 
     // Optimistic UI update
     const updatedLikes = new Set(likedBookIds);
     if (isLiked) {
-      updatedLikes.delete(bookId);
+      updatedLikes.delete(numericId);
     } else {
-      updatedLikes.add(bookId);
+      updatedLikes.add(numericId);
     }
     setLikedBookIds(updatedLikes);
 
-    if (isLiked) {
-      try {
-        console.log(`[Home] Sending DELETE /api/user/likes/${bookId} with Authorization header attached`);
-        const res = await fetch(`/api/user/likes/${bookId}`, {
-          method: 'DELETE',
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        const data = await res.json();
-        console.log(`[Home] DELETE /api/user/likes/${bookId} status: ${res.status}`, data);
-        if (!res.ok) {
-          console.error(`[Home] DELETE /api/user/likes/${bookId} failed, reverting UI`);
-          setLikedBookIds(likedBookIds);
+    try {
+      const method = isLiked ? 'DELETE' : 'POST';
+      console.log(`[Home] Sending ${method} /api/user/likes/${bookId} with Authorization header attached`);
+      const res = await fetch(`/api/user/likes/${bookId}`, {
+        method,
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json();
+      console.log(`[Home] ${method} /api/user/likes/${bookId} status: ${res.status}`, data);
+      if (!res.ok) {
+        if (res.status === 401) {
+          alert("Your session has expired. Please log in again.");
+          navigate('/login');
+        } else {
+          alert(data.message || "Failed to update like status.");
         }
-      } catch (err) {
-        console.error(`[Home] Error unliking bookId ${bookId}:`, err);
+        console.error(`[Home] ${method} /api/user/likes/${bookId} failed, reverting UI`);
         setLikedBookIds(likedBookIds);
       }
-    } else {
-      try {
-        console.log(`[Home] Sending POST /api/user/likes/${bookId} with Authorization header attached`);
-        const res = await fetch(`/api/user/likes/${bookId}`, {
-          method: 'POST',
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        const data = await res.json();
-        console.log(`[Home] POST /api/user/likes/${bookId} status: ${res.status}`, data);
-        if (!res.ok) {
-          console.error(`[Home] POST /api/user/likes/${bookId} failed, reverting UI`);
-          setLikedBookIds(likedBookIds);
-        }
-      } catch (err) {
-        console.error(`[Home] Error liking bookId ${bookId}:`, err);
-        setLikedBookIds(likedBookIds);
-      }
+    } catch (err) {
+      console.error(`[Home] Error toggling like for bookId ${bookId}:`, err);
+      setLikedBookIds(likedBookIds);
     }
   };
 

@@ -20,7 +20,7 @@ import java.time.LocalDateTime;
 import java.util.Optional;
 
 @RestController
-@RequestMapping("/api/auth")
+@RequestMapping({"/api/auth", "/v1/auth"})
 @RequiredArgsConstructor
 public class AuthController {
 
@@ -33,7 +33,7 @@ public class AuthController {
 
     private static final SecureRandom random = new SecureRandom();
 
-    @PostMapping("/signup")
+    @PostMapping({"/signup", "/register"})
     public ResponseEntity<?> registerUser(@Valid @RequestBody SignupRequest request) {
         if (userRepository.existsByEmail(request.getEmail())) {
             return ResponseEntity.status(HttpStatus.CONFLICT)
@@ -49,6 +49,14 @@ public class AuthController {
                 .build();
 
         User savedUser = userRepository.save(user);
+        
+        // Send welcome notification email to first-time user
+        try {
+            emailService.sendWelcomeEmail(savedUser.getEmail(), savedUser.getName());
+        } catch (Exception e) {
+            // Non-blocking catch to ensure registration always succeeds
+        }
+
         String token = tokenProvider.generateToken(savedUser.getEmail());
 
         AuthResponse response = AuthResponse.builder()
@@ -56,7 +64,11 @@ public class AuthController {
                 .userId(savedUser.getId())
                 .name(savedUser.getName())
                 .email(savedUser.getEmail())
+                .dob(savedUser.getDob())
+                .phoneNumber(savedUser.getPhoneNumber())
+                .gender(savedUser.getGender())
                 .preferredLanguage(savedUser.getPreferredLanguage())
+                .profilePicUrl(savedUser.getProfilePicUrl())
                 .build();
 
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
@@ -83,7 +95,11 @@ public class AuthController {
                 .userId(user.getId())
                 .name(user.getName())
                 .email(user.getEmail())
+                .dob(user.getDob())
+                .phoneNumber(user.getPhoneNumber())
+                .gender(user.getGender())
                 .preferredLanguage(user.getPreferredLanguage())
+                .profilePicUrl(user.getProfilePicUrl())
                 .build();
 
         return ResponseEntity.ok(response);
@@ -183,6 +199,7 @@ public class AuthController {
     public ResponseEntity<?> googleLogin(@Valid @RequestBody GoogleLoginRequest request) {
         String email = request.getEmail();
         String name = request.getName() != null ? request.getName() : email;
+        boolean isNewUser = !userRepository.existsByEmail(email);
 
         User user = userRepository.findByEmail(email).orElseGet(() -> {
             User newUser = User.builder()
@@ -195,6 +212,14 @@ public class AuthController {
             return userRepository.save(newUser);
         });
 
+        if (isNewUser) {
+            try {
+                emailService.sendWelcomeEmail(user.getEmail(), user.getName());
+            } catch (Exception e) {
+                // Non-blocking catch
+            }
+        }
+
         String token = tokenProvider.generateToken(user.getEmail());
 
         AuthResponse response = AuthResponse.builder()
@@ -202,7 +227,11 @@ public class AuthController {
                 .userId(user.getId())
                 .name(user.getName())
                 .email(user.getEmail())
+                .dob(user.getDob())
+                .phoneNumber(user.getPhoneNumber())
+                .gender(user.getGender())
                 .preferredLanguage(user.getPreferredLanguage())
+                .profilePicUrl(user.getProfilePicUrl())
                 .build();
 
         return ResponseEntity.ok(response);

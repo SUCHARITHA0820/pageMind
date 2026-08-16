@@ -79,7 +79,8 @@ public class BookService {
                 .build();
 
         UserBookLike savedLike = userBookLikeRepository.save(like);
-        System.out.println("[BookService] Successfully saved UserBookLike row ID: " + savedLike.getId() + " (userId=" + user.getId() + ", bookId=" + book.getId() + ")");
+        Long savedId = (savedLike != null) ? savedLike.getId() : null;
+        System.out.println("[BookService] Successfully saved UserBookLike row ID: " + savedId + " (userId=" + user.getId() + ", bookId=" + book.getId() + ")");
         return true;
     }
 

@@ -13,7 +13,72 @@ export default function Chatbot() {
 
   const [inputMessage, setInputMessage] = useState('');
   const [loading, setLoading] = useState(false);
+  const [likedBookIds, setLikedBookIds] = useState(new Set());
   const [sessionId] = useState(() => (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : 'session_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9)));
+
+  useEffect(() => {
+    if (token) {
+      fetchUserLikes();
+    }
+  }, [token]);
+
+  const fetchUserLikes = async () => {
+    try {
+      const res = await fetch('/api/user/likes', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          const ids = new Set(data.map(b => Number(b.id || b.bookId)));
+          setLikedBookIds(ids);
+        }
+      }
+    } catch (e) {
+      console.error("[Chatbot] Failed to fetch user likes:", e);
+    }
+  };
+
+  const toggleLike = async (e, bookId) => {
+    e.stopPropagation();
+    const numericId = Number(bookId);
+
+    if (!token) {
+      alert("Please log in to like books and save them to your profile!");
+      navigate('/login');
+      return;
+    }
+
+    const isLiked = likedBookIds.has(numericId);
+    const updatedLikes = new Set(likedBookIds);
+    if (isLiked) {
+      updatedLikes.delete(numericId);
+    } else {
+      updatedLikes.add(numericId);
+    }
+    setLikedBookIds(updatedLikes);
+
+    try {
+      const method = isLiked ? 'DELETE' : 'POST';
+      const res = await fetch(`/api/user/likes/${bookId}`, {
+        method,
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        if (res.status === 401) {
+          alert("Your session has expired. Please log in again.");
+          navigate('/login');
+        } else {
+          alert(data.message || "Failed to update like status.");
+        }
+        setLikedBookIds(likedBookIds);
+      }
+    } catch (err) {
+      console.error(`[Chatbot] Error toggling like for bookId ${bookId}:`, err);
+      setLikedBookIds(likedBookIds);
+    }
+  };
 
   // Conversational message thread history
   const [messages, setMessages] = useState([
@@ -250,9 +315,30 @@ export default function Chatbot() {
 
                         {/* Details & Retailer Links */}
                         <div style={{ flex: 1 }}>
-                          <h4 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#f8fafc', marginBottom: '2px' }}>
-                            {title}
-                          </h4>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2px' }}>
+                            <h4 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#f8fafc', margin: 0 }}>
+                              {title}
+                            </h4>
+                            <button
+                              onClick={(e) => toggleLike(e, bookId)}
+                              style={{
+                                background: likedBookIds.has(Number(bookId)) ? 'rgba(236, 72, 153, 0.2)' : 'rgba(255, 255, 255, 0.05)',
+                                border: likedBookIds.has(Number(bookId)) ? '1px solid #ec4899' : '1px solid var(--card-border)',
+                                borderRadius: '50%',
+                                width: '28px',
+                                height: '28px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                transition: 'all 0.2s ease',
+                                cursor: 'pointer',
+                                flexShrink: 0
+                              }}
+                              title={likedBookIds.has(Number(bookId)) ? 'Unlike book' : 'Like book'}
+                            >
+                              <Heart size={14} color={likedBookIds.has(Number(bookId)) ? '#ec4899' : '#94a3b8'} fill={likedBookIds.has(Number(bookId)) ? '#ec4899' : 'none'} />
+                            </button>
+                          </div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', marginBottom: '6px' }}>
                             {author && (
                               <span style={{ color: 'var(--accent-cyan)', fontSize: '0.84rem', fontWeight: 500 }}>

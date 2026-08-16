@@ -159,9 +159,11 @@ class BookServiceTest {
 
     @Test
     void likeBook_whenUserAndBookExist_savesLike() {
+        UserBookLike like = UserBookLike.builder().id(10L).user(sampleUser).book(sampleBook1).build();
         when(userRepository.findByEmail("alice@example.com")).thenReturn(Optional.of(sampleUser));
         when(bookRepository.findById(101L)).thenReturn(Optional.of(sampleBook1));
         when(userBookLikeRepository.existsByUserIdAndBookId(1L, 101L)).thenReturn(false);
+        when(userBookLikeRepository.save(any(UserBookLike.class))).thenReturn(like);
 
         boolean success = bookService.likeBook("alice@example.com", 101L);
 
@@ -210,14 +212,8 @@ class BookServiceTest {
 
     @Test
     void getUserLikedBooks_returnsLikedBooksList() {
-        UserBookLike like = UserBookLike.builder()
-                .id(10L)
-                .user(sampleUser)
-                .book(sampleBook1)
-                .build();
-
         when(userRepository.findByEmail("alice@example.com")).thenReturn(Optional.of(sampleUser));
-        when(userBookLikeRepository.findByUserId(1L)).thenReturn(Collections.singletonList(like));
+        when(userBookLikeRepository.findLikedBooksByUserId(1L)).thenReturn(Collections.singletonList(sampleBook1));
 
         List<Book> result = bookService.getUserLikedBooks("alice@example.com");
 

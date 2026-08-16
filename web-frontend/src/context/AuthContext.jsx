@@ -80,15 +80,10 @@ export const AuthProvider = ({ children }) => {
     }
   }, [user, token]);
 
-  const updateProfile = useCallback(async ({ name, preferredLanguage }) => {
-    const updatedUser = { ...user, name, preferredLanguage };
+  const updateProfile = useCallback(async ({ name, email, dob, phoneNumber, gender, profilePicUrl }) => {
+    const updatedUser = { ...user, name, email, dob, phoneNumber, gender, profilePicUrl };
     setUser(updatedUser);
-
-    if (preferredLanguage) {
-      setLanguage(preferredLanguage);
-      localStorage.setItem('pagemind_lang', preferredLanguage);
-      i18n.changeLanguage(preferredLanguage);
-    }
+    localStorage.setItem('pagemind_user', JSON.stringify(updatedUser));
 
     if (token) {
       try {
@@ -98,11 +93,13 @@ export const AuthProvider = ({ children }) => {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`
           },
-          body: JSON.stringify({ name, preferredLanguage })
+          body: JSON.stringify({ name, email, dob, phoneNumber, gender, profilePicUrl })
         });
         if (response.ok) {
           const resData = await response.json();
-          setUser(prev => ({ ...prev, ...resData }));
+          const merged = { ...user, ...resData };
+          setUser(merged);
+          localStorage.setItem('pagemind_user', JSON.stringify(merged));
         }
       } catch (error) {
         console.warn('Profile PUT update failed:', error);

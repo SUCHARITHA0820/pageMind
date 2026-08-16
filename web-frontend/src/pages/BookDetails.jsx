@@ -74,7 +74,7 @@ export default function BookDetails() {
 
   const toggleLike = async () => {
     if (!token) {
-      console.warn('[BookDetails] User clicked heart but is not authenticated. Redirecting to login.');
+      alert("Please log in to like books and save them to your profile!");
       navigate('/login');
       return;
     }
@@ -92,6 +92,12 @@ export default function BookDetails() {
       const data = await res.json();
       console.log(`[BookDetails] ${method} /api/user/likes/${id} status: ${res.status}`, data);
       if (!res.ok) {
+        if (res.status === 401) {
+          alert("Your session has expired. Please log in again.");
+          navigate('/login');
+        } else {
+          alert(data.message || "Failed to update like status.");
+        }
         console.error(`[BookDetails] ${method} /api/user/likes/${id} failed, reverting state`);
         setIsLiked(!nextState);
       }

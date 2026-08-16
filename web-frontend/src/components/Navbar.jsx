@@ -2,17 +2,12 @@ import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
-import { BookOpen, Bot, User, LogOut, LogIn, Globe, Search } from 'lucide-react';
+import { BookOpen, Bot, User, LogOut, LogIn, Search } from 'lucide-react';
 
 export default function Navbar() {
-  const { t, i18n } = useTranslation();
-  const { user, logout, language, updateLanguage } = useAuth();
+  const { t } = useTranslation();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
-
-  const handleLanguageToggle = (e) => {
-    const newLang = e.target.value;
-    updateLanguage(newLang);
-  };
 
   const handleLogout = () => {
     logout();
@@ -65,31 +60,36 @@ export default function Navbar() {
             <span>{t('nav.chatbot')}</span>
           </Link>
 
-          <Link to="/profile" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.95rem', fontWeight: 500 }}>
-            <User size={16} color="#a5b4fc" />
+          <Link to="/profile" style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.95rem', fontWeight: 500 }}>
+            {user?.profilePicUrl ? (
+              <img
+                src={user.profilePicUrl}
+                alt="Profile Avatar"
+                style={{
+                  width: '26px',
+                  height: '26px',
+                  borderRadius: '50%',
+                  objectFit: 'cover',
+                  border: '1.5px solid var(--accent-cyan)'
+                }}
+                onError={(e) => {
+                  e.target.style.display = 'none';
+                  e.target.nextSibling.style.display = 'inline-block';
+                }}
+              />
+            ) : null}
+            <span
+              style={{
+                display: user?.profilePicUrl ? 'none' : 'inline-block',
+                fontSize: '1.1rem',
+                lineHeight: 1
+              }}
+              title="Contact Emoji Avatar"
+            >
+              👤
+            </span>
             <span>{t('nav.profile', 'Profile')}</span>
           </Link>
-
-          {/* Language Selector Dropdown */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(255, 255, 255, 0.05)', padding: '4px 10px', borderRadius: '8px', border: '1px solid var(--card-border)' }}>
-            <Globe size={16} color="#a5b4fc" />
-            <select
-              value={language}
-              onChange={handleLanguageToggle}
-              style={{
-                background: 'transparent',
-                border: 'none',
-                color: 'var(--text-main)',
-                fontSize: '0.85rem',
-                fontWeight: 600,
-                outline: 'none',
-                cursor: 'pointer'
-              }}
-            >
-              <option value="en" style={{ background: 'var(--bg-surface)' }}>EN 🇬🇧</option>
-              <option value="te" style={{ background: 'var(--bg-surface)' }}>TE 🇮🇳</option>
-            </select>
-          </div>
 
           {/* Auth Action Buttons */}
           {user ? (

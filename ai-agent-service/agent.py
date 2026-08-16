@@ -101,7 +101,10 @@ def run_agent(message: str, user_id: Optional[int] = None, session_id: Optional[
 
     # Update session memory
     if eff_session_id and final_books:
-        save_session(eff_session_id, final_books, mood=final_mood, genre=final_genre)
+        if not is_followup:
+            save_session(eff_session_id, final_books, mood=final_mood, genre=final_genre)
+        else:
+            save_session(eff_session_id, stored_books, mood=final_mood, genre=final_genre)
 
     logger.info(f"=== Completed LangGraph Agent Run (is_followup={is_followup}, books={len(final_books)}) ===")
 

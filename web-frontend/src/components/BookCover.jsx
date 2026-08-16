@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BookOpen } from 'lucide-react';
 
 const GRADIENT_PALETTES = [
@@ -22,21 +22,48 @@ function getHashIndex(str = '') {
 
 export default function BookCover({
   coverUrl,
+  cover_url,
+  book,
   title = 'Untitled',
   author = '',
   genre = '',
   width = '100%',
   height = '100%',
   borderRadius = '12px',
-  showTitleFallback = true
+  showTitleFallback = true,
+  className = '',
+  style = {}
 }) {
+  let rawUrl = coverUrl || cover_url || (book && (book.cover_url || book.coverUrl));
+  if (typeof rawUrl === 'string' && rawUrl.startsWith('http://')) {
+    rawUrl = rawUrl.replace('http://', 'https://');
+  }
+
+  const actualTitle = (book && book.title) || title || 'Untitled';
+  const actualAuthor = (book && book.author) || author || '';
+
   const [imgError, setImgError] = useState(false);
 
-  const validUrl = coverUrl && typeof coverUrl === 'string' && coverUrl.trim().length > 0;
-  const gradient = GRADIENT_PALETTES[getHashIndex(title + author)];
+  useEffect(() => {
+    setImgError(false);
+  }, [rawUrl]);
+
+  const validUrl = Boolean(
+    rawUrl &&
+    typeof rawUrl === 'string' &&
+    rawUrl.trim().length > 0 &&
+    rawUrl !== 'null' &&
+    rawUrl !== 'undefined' &&
+    !rawUrl.includes('placehold.co') &&
+    !rawUrl.includes('via.placeholder') &&
+    !rawUrl.includes('placeholder')
+  );
+
+  const gradient = GRADIENT_PALETTES[getHashIndex(actualTitle + actualAuthor)];
 
   return (
     <div
+      className={`book-cover-container ${className}`}
       style={{
         width,
         height,
@@ -50,14 +77,20 @@ export default function BookCover({
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        flexShrink: 0
+        flexShrink: 0,
+        ...style
       }}
     >
       {validUrl && !imgError ? (
         <img
-          src={coverUrl}
-          alt={title}
-          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+          src={rawUrl}
+          alt={actualTitle}
+          style={{
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            display: 'block'
+          }}
           onError={() => setImgError(true)}
         />
       ) : (
@@ -104,9 +137,9 @@ export default function BookCover({
                   overflow: 'hidden'
                 }}
               >
-                {title}
+                {actualTitle}
               </h5>
-              {author && (
+              {actualAuthor && (
                 <p
                   style={{
                     color: '#06b6d4',
@@ -119,7 +152,7 @@ export default function BookCover({
                     overflow: 'hidden'
                   }}
                 >
-                  {author}
+                  {actualAuthor}
                 </p>
               )}
             </>
@@ -129,3 +162,5 @@ export default function BookCover({
     </div>
   );
 }
+
+export { BookCover as BookCard };

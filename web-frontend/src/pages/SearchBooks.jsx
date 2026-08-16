@@ -1,39 +1,172 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Search, BookOpen, ArrowRight, Frown, ChevronDown } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { Search, BookOpen, ArrowRight, Frown, ChevronDown, Filter, Heart } from 'lucide-react';
 import BookCover from '../components/BookCover';
+import { getFallbackBooks } from '../data/fallbackBooks';
+
+const ALL_GENRES = [
+  'Fiction',
+  'Science Fiction',
+  'Romance',
+  'Fantasy',
+  'Mystery',
+  'Non-Fiction',
+  'Self-Help',
+  'Classic Literature',
+  'Thriller',
+  'Dystopian',
+  'Biography',
+  'History',
+  'Poetry',
+  'Graphic Novel',
+  'Young Adult',
+  'Horror',
+  'Philosophy'
+];
 
 export default function SearchBooks() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const { token } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
 
-  const [query, setQuery] = useState('');
+  const initialQuery = searchParams.get('search') || searchParams.get('q') || '';
+  const initialGenre = searchParams.get('genre') || '';
+
+  const [query, setQuery] = useState(initialQuery);
+  const [selectedGenre, setSelectedGenre] = useState(initialGenre);
   const [books, setBooks] = useState([]);
+  const [likedBookIds, setLikedBookIds] = useState(new Set());
   const [loading, setLoading] = useState(true);
-  const [displayLimit, setDisplayLimit] = useState(15);
+  const [displayLimit, setDisplayLimit] = useState(50);
 
+  // Fetch liked books when token is available
   useEffect(() => {
-    fetchSearchResults(query);
-  }, [query]);
+    if (token) {
+      fetchUserLikes();
+    }
+  }, [token]);
 
-  useEffect(() => {
-    setDisplayLimit(15);
-  }, [query]);
-
-  const fetchSearchResults = async (searchQuery) => {
-    setLoading(true);
+  const fetchUserLikes = async () => {
     try {
-      const url = searchQuery.trim() ? `/api/books?search=${encodeURIComponent(searchQuery.trim())}` : '/api/books';
-      const res = await fetch(url);
+      const res = await fetch('/api/user/likes', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data)) {
-          setBooks(data);
+          const ids = new Set(data.map(b => Number(b.id || b.bookId)));
+          setLikedBookIds(ids);
         }
       }
     } catch (e) {
-      console.error("Failed to search books:", e);
+      console.error("[SearchBooks] Failed to fetch user likes:", e);
+    }
+  };
+
+  const toggleLike = async (e, bookId) => {
+    e.stopPropagation();
+    const numericId = Number(bookId);
+
+    if (!token) {
+      alert("Please log in to like books and save them to your profile!");
+      navigate('/login');
+      return;
+    }
+
+    const isLiked = likedBookIds.has(numericId);
+    const updatedLikes = new Set(likedBookIds);
+    if (isLiked) {
+      updatedLikes.delete(numericId);
+    } else {
+      updatedLikes.add(numericId);
+    }
+    setLikedBookIds(updatedLikes);
+
+    try {
+      const method = isLiked ? 'DELETE' : 'POST';
+      const res = await fetch(`/api/user/likes/${bookId}`, {
+        method,
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        if (res.status === 401) {
+          alert("Your session has expired. Please log in again.");
+          navigate('/login');
+        } else {
+          alert(data.message || "Failed to update like status.");
+        }
+        setLikedBookIds(likedBookIds);
+      }
+    } catch (err) {
+      console.error(`[SearchBooks] Error toggling like for bookId ${bookId}:`, err);
+      setLikedBookIds(likedBookIds);
+    }
+  };
+
+  // Sync state when URL params change
+  useEffect(() => {
+    const qParam = searchParams.get('search') || searchParams.get('q') || '';
+    const gParam = searchParams.get('genre') || '';
+    setQuery(qParam);
+    setSelectedGenre(gParam);
+  }, [searchParams]);
+
+  useEffect(() => {
+    fetchSearchResults(query, selectedGenre);
+    setDisplayLimit(50);
+  }, [query, selectedGenre]);
+
+  const updateUrlParams = (newQuery, newGenre) => {
+    const params = {};
+    if (newQuery.trim()) params.search = newQuery.trim();
+    if (newGenre.trim()) params.genre = newGenre.trim();
+    setSearchParams(params);
+  };
+
+  const handleQueryChange = (e) => {
+    const val = e.target.value;
+    setQuery(val);
+    updateUrlParams(val, selectedGenre);
+  };
+
+  const handleGenreSelect = (genreName) => {
+    const newGenre = selectedGenre === genreName ? '' : genreName;
+    setSelectedGenre(newGenre);
+    updateUrlParams(query, newGenre);
+  };
+
+  const fetchSearchResults = async (searchQuery, genreFilter) => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams();
+      params.append('size', '500'); // Fetch full catalog matching query/genre
+      if (searchQuery && searchQuery.trim()) {
+        params.append('search', searchQuery.trim());
+      }
+      if (genreFilter && genreFilter.trim()) {
+        params.append('genre', genreFilter.trim());
+      }
+
+      const url = `/api/books?${params.toString()}`;
+      const res = await fetch(url);
+      if (res.ok) {
+        const data = await res.json();
+        if (data && Array.isArray(data.content)) {
+          setBooks(data.content);
+          return;
+        } else if (Array.isArray(data)) {
+          setBooks(data);
+          return;
+        }
+      }
+      throw new Error(`Server status ${res.status}`);
+    } catch (e) {
+      console.warn("Search API unavailable, using fallback dataset:", e);
+      setBooks(getFallbackBooks(genreFilter, searchQuery));
     } finally {
       setLoading(false);
     }
@@ -42,19 +175,19 @@ export default function SearchBooks() {
   const visibleBooks = books.slice(0, displayLimit);
 
   return (
-    <div className="container page-container" style={{ maxWidth: '900px' }}>
+    <div className="container page-container" style={{ maxWidth: '960px' }}>
       
       {/* Search Header */}
-      <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+      <div style={{ textAlign: 'center', marginBottom: '28px' }}>
         <h1 style={{ fontSize: '2.2rem', fontWeight: 800, marginBottom: '10px' }} className="gradient-text">
           Search Books Catalog
         </h1>
-        <p style={{ color: 'var(--text-muted)', fontSize: '1rem', maxWidth: '560px', margin: '0 auto 24px' }}>
-          Find books by title or author across our 500+ title collection in real time.
+        <p style={{ color: 'var(--text-muted)', fontSize: '1rem', maxWidth: '600px', margin: '0 auto 20px' }}>
+          Explore all books by title, author, or genre across our full catalog.
         </p>
 
         {/* Top Search Input Bar */}
-        <div style={{ position: 'relative', maxWidth: '680px', margin: '0 auto' }}>
+        <div style={{ position: 'relative', maxWidth: '680px', margin: '0 auto 20px' }}>
           <Search size={22} color="#a5b4fc" style={{ position: 'absolute', left: '18px', top: '16px' }} />
           <input
             type="text"
@@ -69,22 +202,44 @@ export default function SearchBooks() {
             }}
             placeholder="Search by book title or author name..."
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={handleQueryChange}
           />
+        </div>
+
+        {/* Genre Filter Pills */}
+        <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', flexWrap: 'wrap', maxWidth: '920px', margin: '0 auto' }}>
+          <button
+            onClick={() => handleGenreSelect('')}
+            className={`btn ${selectedGenre === '' ? 'btn-primary' : 'btn-secondary'}`}
+            style={{ padding: '6px 14px', fontSize: '0.82rem', borderRadius: '20px' }}
+          >
+            All Genres
+          </button>
+          {ALL_GENRES.map((g) => (
+            <button
+              key={g}
+              onClick={() => handleGenreSelect(g)}
+              className={`btn ${selectedGenre === g ? 'btn-primary' : 'btn-secondary'}`}
+              style={{ padding: '6px 14px', fontSize: '0.82rem', borderRadius: '20px' }}
+            >
+              {g}
+            </button>
+          ))}
         </div>
       </div>
 
       {/* Results Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--text-muted)' }}>
-          {query ? `Search Results for "${query}"` : 'All Catalog Books'} ({visibleBooks.length} of {books.length})
+          {selectedGenre ? `Genre: "${selectedGenre}"` : query ? `Search Results for "${query}"` : 'All Catalog Books'} 
+          {' '}(<strong style={{ color: '#fff' }}>{visibleBooks.length}</strong> of <strong style={{ color: 'var(--accent-cyan)' }}>{books.length}</strong> books)
         </h3>
         {loading ? (
-          <span style={{ fontSize: '0.88rem', color: 'var(--accent-cyan)' }}>Searching...</span>
+          <span style={{ fontSize: '0.88rem', color: 'var(--accent-cyan)' }}>Loading catalog...</span>
         ) : books.length > visibleBooks.length ? (
           <button
             onClick={() => setDisplayLimit(books.length)}
-            style={{ background: 'none', border: 'none', color: 'var(--accent-cyan)', fontSize: '0.85rem', cursor: 'pointer', fontWeight: 600 }}
+            style={{ background: 'none', border: 'none', color: 'var(--accent-cyan)', fontSize: '0.88rem', cursor: 'pointer', fontWeight: 600 }}
           >
             Show All ({books.length})
           </button>
@@ -111,7 +266,7 @@ export default function SearchBooks() {
             No matching books found
           </h3>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.94rem', maxWidth: '420px', margin: '0 auto' }}>
-            We couldn't find any books matching "{query}". Try checking for spelling errors or searching by a different author or genre.
+            We couldn't find any books matching your selection{selectedGenre ? ` in "${selectedGenre}"` : ''}. Try selecting a different genre or clearing your search.
           </p>
         </div>
       )}
@@ -133,7 +288,7 @@ export default function SearchBooks() {
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flex: 1 }}>
-              {/* Thumbnail Cover Image with Fallback */}
+              {/* Thumbnail Cover Image */}
               <BookCover
                 coverUrl={book.coverUrl || book.cover_url}
                 title={book.title}
@@ -144,7 +299,6 @@ export default function SearchBooks() {
                 borderRadius="8px"
                 showTitleFallback={false}
               />
-
 
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
@@ -172,9 +326,30 @@ export default function SearchBooks() {
               </div>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--accent-cyan)', fontSize: '0.88rem', fontWeight: 600, flexShrink: 0 }}>
-              <span>View Details</span>
-              <ArrowRight size={16} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexShrink: 0 }}>
+              <button
+                onClick={(e) => toggleLike(e, book.id)}
+                style={{
+                  background: likedBookIds.has(Number(book.id)) ? 'rgba(236, 72, 153, 0.2)' : 'rgba(255, 255, 255, 0.05)',
+                  border: likedBookIds.has(Number(book.id)) ? '1px solid #ec4899' : '1px solid var(--card-border)',
+                  borderRadius: '50%',
+                  width: '36px',
+                  height: '36px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  transition: 'all 0.2s ease',
+                  cursor: 'pointer'
+                }}
+                title={likedBookIds.has(Number(book.id)) ? 'Unlike book' : 'Like book'}
+              >
+                <Heart size={18} color={likedBookIds.has(Number(book.id)) ? '#ec4899' : '#94a3b8'} fill={likedBookIds.has(Number(book.id)) ? '#ec4899' : 'none'} />
+              </button>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--accent-cyan)', fontSize: '0.88rem', fontWeight: 600 }}>
+                <span>View Details</span>
+                <ArrowRight size={16} />
+              </div>
             </div>
           </div>
         ))}
@@ -184,11 +359,11 @@ export default function SearchBooks() {
       {books.length > visibleBooks.length && (
         <div style={{ textAlign: 'center', marginTop: '32px', marginBottom: '20px' }}>
           <button
-            onClick={() => setDisplayLimit(prev => prev + 20)}
+            onClick={() => setDisplayLimit((prev) => prev + 50)}
             className="btn btn-primary"
             style={{ padding: '12px 32px', fontSize: '1rem', display: 'inline-flex', alignItems: 'center', gap: '8px', borderRadius: '30px' }}
           >
-            Load More Results ({books.length - visibleBooks.length} remaining)
+            Load More Books ({books.length - visibleBooks.length} remaining)
             <ChevronDown size={18} />
           </button>
         </div>

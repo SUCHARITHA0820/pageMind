@@ -28,3 +28,20 @@ target/
 
 ### VS Code ###
 .vscode/
+
+### Secrets — PageMind specific ###
+**/application.properties
+!**/application.properties.example
+
+### Python (ai-agent-service) ###
+__pycache__/
+venv/
+*.pyc
+
+### Node/React (web-frontend) ###
+node_modules/
+.env
+
+### OS files ###
+.DS_Store
+Thumbs.db

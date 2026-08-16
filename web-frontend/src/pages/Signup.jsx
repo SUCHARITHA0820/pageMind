@@ -21,35 +21,23 @@ export default function Signup() {
     setLoading(true);
 
     try {
-      // Call primary POST /api/auth/signup (or fallback /api/auth/register)
-      let response = await fetch('/api/auth/signup', {
+      const response = await fetch('/api/auth/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, password })
+        body: JSON.stringify({ name: name.trim(), email: email.trim(), password })
       });
-
-      if (!response.ok) {
-        response = await fetch('/api/auth/register', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name, email, password })
-        });
-      }
 
       const data = await response.json();
 
       if (response.ok && data.token) {
-        // Store returned JWT strictly in memory context
-        login(data.token, data.user || { name, email });
-        // Redirect to LanguageSelect onboarding screen right after signup/first login
+        login(data.token, { id: data.userId, name: data.name || name, email: data.email || email });
         navigate('/language-select');
       } else {
-        setError(data.message || 'Signup failed. Please try again.');
+        const msg = data.message || (typeof data === 'object' ? Object.values(data).join('. ') : 'Signup failed. Please try again.');
+        setError(msg);
       }
     } catch (err) {
-      // Fallback mock registration for local standalone testing
-      login('mock-in-memory-signup-token', { name, email });
-      navigate('/language-select');
+      setError('Unable to connect to authentication server. Please check your network connection and ensure the backend is running.');
     } finally {
       setLoading(false);
     }

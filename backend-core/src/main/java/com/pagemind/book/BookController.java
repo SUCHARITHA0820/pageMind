@@ -24,10 +24,10 @@ public class BookController {
     @GetMapping("/books")
     public ResponseEntity<PageResponse<Book>> getAllBooks(
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(defaultValue = "500") int size,
             @RequestParam(required = false) String genre,
             @RequestParam(required = false) String search) {
-        Pageable pageable = PageRequest.of(page, size);
+        Pageable pageable = PageRequest.of(page, Math.min(size, 2000));
         Page<Book> booksPage = bookService.getAllBooks(genre, search, pageable);
         return ResponseEntity.ok(PageResponse.from(booksPage));
     }

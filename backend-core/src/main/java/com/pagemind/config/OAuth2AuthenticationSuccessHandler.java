@@ -20,6 +20,8 @@ import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 
+import com.pagemind.auth.EmailService;
+
 @Component
 @RequiredArgsConstructor
 @Slf4j
@@ -27,6 +29,7 @@ public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccess
 
     private final UserRepository userRepository;
     private final JwtTokenProvider tokenProvider;
+    private final EmailService emailService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Override
@@ -51,6 +54,14 @@ public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccess
                     .build();
             User saved = userRepository.save(newUser);
             log.info("[OAuth2SuccessHandler] Step 3b: Successfully saved new Google user with ID: {}", saved.getId());
+            
+            // Send welcome notification email to first-time OAuth2 user
+            try {
+                emailService.sendWelcomeEmail(saved.getEmail(), saved.getName());
+            } catch (Exception e) {
+                log.warn("[OAuth2SuccessHandler] Failed to send welcome email to {}: {}", saved.getEmail(), e.getMessage());
+            }
+
             return saved;
         });
 

@@ -2,23 +2,36 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
-import { User as UserIcon, Globe, Heart, Save, Edit3, BookOpen, LogIn, UserPlus, Sparkles } from 'lucide-react';
+import { User as UserIcon, Heart, Save, Edit3, BookOpen, LogIn, UserPlus, Sparkles, Mail, Phone, Calendar, UserCheck, Camera, X } from 'lucide-react';
 import BookCover from '../components/BookCover';
 
 export default function Profile() {
   const { t } = useTranslation();
-  const { user, token, language, updateProfile } = useAuth();
+  const { user, token, updateProfile } = useAuth();
   const navigate = useNavigate();
 
   const [name, setName] = useState(user?.name || '');
-  const [selectedLang, setSelectedLang] = useState(language || 'en');
+  const [email, setEmail] = useState(user?.email || '');
+  const [dob, setDob] = useState(user?.dob || '');
+  const [phoneNumber, setPhoneNumber] = useState(user?.phoneNumber || '');
+  const [gender, setGender] = useState(user?.gender || '');
+  const [profilePicUrl, setProfilePicUrl] = useState(user?.profilePicUrl || '');
+  const [imgLoadFailed, setImgLoadFailed] = useState(false);
   const [likedBooks, setLikedBooks] = useState([]);
   const [loading, setLoading] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
 
   useEffect(() => {
-    if (user?.name) {
-      setName(user.name);
+    if (user) {
+      if (user.name) setName(user.name);
+      if (user.email) setEmail(user.email);
+      if (user.dob) setDob(user.dob);
+      if (user.phoneNumber) setPhoneNumber(user.phoneNumber);
+      if (user.gender) setGender(user.gender);
+      if (user.profilePicUrl !== undefined) {
+        setProfilePicUrl(user.profilePicUrl || '');
+        setImgLoadFailed(false);
+      }
     }
   }, [user]);
 
@@ -37,7 +50,14 @@ export default function Profile() {
       if (res.ok) {
         const data = await res.json();
         if (data.name) setName(data.name);
-        if (data.preferredLanguage) setSelectedLang(data.preferredLanguage);
+        if (data.email) setEmail(data.email);
+        if (data.dob) setDob(data.dob);
+        if (data.phoneNumber) setPhoneNumber(data.phoneNumber);
+        if (data.gender) setGender(data.gender);
+        if (data.profilePicUrl !== undefined) {
+          setProfilePicUrl(data.profilePicUrl || '');
+          setImgLoadFailed(false);
+        }
       }
     } catch (e) {
       // Retain local state
@@ -46,15 +66,11 @@ export default function Profile() {
 
   const fetchLikedBooks = async () => {
     try {
-      console.log('[Profile] Fetching liked books with token:', token ? '[PRESENT]' : '[NULL]');
       const res = await fetch('/api/user/likes', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      console.log(`[Profile] GET /api/user/likes status: ${res.status}`);
       if (res.ok) {
         const data = await res.json();
-        console.log('[Profile] GET /api/user/likes raw response:', data);
-        
         let booksList = [];
         if (Array.isArray(data)) {
           booksList = data;
@@ -65,16 +81,11 @@ export default function Profile() {
         } else if (Array.isArray(data?.data)) {
           booksList = data.data;
         }
-        
-        console.log('[Profile] Parsed liked books count:', booksList.length, booksList);
         setLikedBooks(booksList);
       } else {
-        const err = await res.json().catch(() => null);
-        console.error(`[Profile] GET /api/user/likes failed with status ${res.status}:`, err);
         setLikedBooks([]);
       }
     } catch (e) {
-      console.error("[Profile] Error fetching liked books:", e);
       setLikedBooks([]);
     }
   };
@@ -85,7 +96,14 @@ export default function Profile() {
     setSavedSuccess(false);
 
     try {
-      await updateProfile({ name, preferredLanguage: selectedLang });
+      await updateProfile({
+        name,
+        email,
+        dob,
+        phoneNumber,
+        gender,
+        profilePicUrl
+      });
       setSavedSuccess(true);
       setTimeout(() => setSavedSuccess(false), 3000);
     } catch (e) {
@@ -127,79 +145,228 @@ export default function Profile() {
 
       {savedSuccess && (
         <div style={{ background: 'rgba(16, 185, 129, 0.15)', border: '1px solid rgba(16, 185, 129, 0.3)', color: '#6ee7b7', padding: '12px', borderRadius: '10px', marginBottom: '24px', fontSize: '0.9rem' }}>
-          Profile and language preferences updated successfully!
+          Profile updated successfully!
         </div>
       )}
 
       {/* Profile Edit Form Card */}
       <div className="glass-card" style={{ padding: '32px', marginBottom: '32px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '20px', marginBottom: '28px' }}>
+          {/* Avatar Container */}
           <div style={{
-            width: '64px',
-            height: '64px',
+            width: '72px',
+            height: '72px',
             borderRadius: '50%',
             background: 'linear-gradient(135deg, #6366f1, #06b6d4)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            flexShrink: 0
+            flexShrink: 0,
+            overflow: 'hidden',
+            boxShadow: '0 4px 20px rgba(99, 102, 241, 0.35)',
+            border: '2px solid rgba(255, 255, 255, 0.2)',
+            position: 'relative'
           }}>
-            <UserIcon size={32} color="#fff" />
+            {profilePicUrl && !imgLoadFailed ? (
+              <img
+                src={profilePicUrl}
+                alt="Profile Pic"
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                onError={() => setImgLoadFailed(true)}
+              />
+            ) : (
+              <span style={{ fontSize: '2.3rem', userSelect: 'none', lineHeight: 1 }} title="Contact Emoji Fallback">
+                👤
+              </span>
+            )}
           </div>
+
           <div>
-            <h2 style={{ fontSize: '1.4rem', fontWeight: 700 }}>
-              {user?.name || name || 'PageMind Reader'}
+            <h2 style={{ fontSize: '1.4rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span>{user?.name || name || 'PageMind Reader'}</span>
+              {!profilePicUrl && (
+                <span style={{
+                  fontSize: '0.72rem',
+                  background: 'rgba(99, 102, 241, 0.2)',
+                  color: '#a5b4fc',
+                  border: '1px solid rgba(99, 102, 241, 0.3)',
+                  padding: '2px 8px',
+                  borderRadius: '12px',
+                  fontWeight: 500
+                }}>
+                  Contact Emoji 👤
+                </span>
+              )}
             </h2>
             <p style={{ color: 'var(--text-muted)', fontSize: '0.92rem' }}>
-              {user?.email || 'Guest Mode'}
+              {email || user?.email || 'Guest Mode'}
             </p>
           </div>
         </div>
 
         <form onSubmit={handleSaveProfile}>
-          <div className="input-group">
-            <label className="input-label" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <Edit3 size={16} />
-              <span>Full Name</span>
-            </label>
-            <input
-              type="text"
-              required
-              className="input-field"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Enter your name"
-            />
+          {/* Profile Picture Settings */}
+          <div style={{
+            background: 'rgba(255, 255, 255, 0.02)',
+            border: '1px solid var(--border-subtle)',
+            padding: '16px',
+            borderRadius: '14px',
+            marginBottom: '20px'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+              <label className="input-label" style={{ display: 'flex', alignItems: 'center', gap: '6px', margin: 0 }}>
+                <Camera size={16} color="var(--accent-cyan)" />
+                <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>Profile Picture URL</span>
+              </label>
+
+              {profilePicUrl && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setProfilePicUrl('');
+                    setImgLoadFailed(false);
+                  }}
+                  className="btn btn-secondary"
+                  style={{
+                    padding: '3px 10px',
+                    fontSize: '0.75rem',
+                    borderRadius: '20px'
+                  }}
+                >
+                  Reset to Contact Emoji 👤
+                </button>
+              )}
+            </div>
+
+            {/* Custom URL Input */}
+            <div style={{ position: 'relative' }}>
+              <input
+                type="url"
+                className="input-field"
+                value={profilePicUrl}
+                onChange={(e) => {
+                  setProfilePicUrl(e.target.value);
+                  setImgLoadFailed(false);
+                }}
+                placeholder="Enter image URL (or leave blank to show Contact Emoji 👤)"
+                style={{ fontSize: '0.88rem', paddingRight: profilePicUrl ? '32px' : '12px' }}
+              />
+              {profilePicUrl && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setProfilePicUrl('');
+                    setImgLoadFailed(false);
+                  }}
+                  style={{
+                    position: 'absolute',
+                    right: '10px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--text-muted)',
+                    cursor: 'pointer',
+                    padding: '4px'
+                  }}
+                >
+                  <X size={14} />
+                </button>
+              )}
+            </div>
           </div>
 
-          <div className="input-group">
-            <label className="input-label" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <Globe size={16} />
-              <span>{t('profile.preferred_language')}</span>
-            </label>
-            <div style={{ display: 'flex', gap: '16px', marginTop: '4px' }}>
-              <button
-                type="button"
-                onClick={() => setSelectedLang('en')}
-                className={`btn ${selectedLang === 'en' ? 'btn-primary' : 'btn-secondary'}`}
-                style={{ padding: '10px 20px', flex: 1 }}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px', marginBottom: '16px' }}>
+            {/* Full Name */}
+            <div className="input-group" style={{ marginBottom: 0 }}>
+              <label className="input-label" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Edit3 size={16} />
+                <span>Full Name</span>
+              </label>
+              <input
+                type="text"
+                required
+                className="input-field"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Enter your name"
+              />
+            </div>
+
+            {/* Email Address */}
+            <div className="input-group" style={{ marginBottom: 0 }}>
+              <label className="input-label" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Mail size={16} />
+                <span>Email Address</span>
+              </label>
+              <input
+                type="email"
+                required
+                className="input-field"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@example.com"
+              />
+            </div>
+
+            {/* Phone Number */}
+            <div className="input-group" style={{ marginBottom: 0 }}>
+              <label className="input-label" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Phone size={16} />
+                <span>Phone Number</span>
+              </label>
+              <input
+                type="tel"
+                className="input-field"
+                value={phoneNumber}
+                onChange={(e) => setPhoneNumber(e.target.value)}
+                placeholder="+1 (555) 000-0000"
+              />
+            </div>
+
+            {/* Date of Birth */}
+            <div className="input-group" style={{ marginBottom: 0 }}>
+              <label className="input-label" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Calendar size={16} />
+                <span>Date of Birth</span>
+              </label>
+              <input
+                type="date"
+                className="input-field"
+                value={dob}
+                onChange={(e) => setDob(e.target.value)}
+                style={{ colorScheme: 'dark' }}
+              />
+            </div>
+
+            {/* Gender */}
+            <div className="input-group" style={{ marginBottom: 0, gridColumn: '1 / -1' }}>
+              <label className="input-label" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <UserCheck size={16} />
+                <span>Gender</span>
+              </label>
+              <select
+                className="input-field"
+                value={gender}
+                onChange={(e) => setGender(e.target.value)}
+                style={{
+                  background: 'var(--bg-input, rgba(255, 255, 255, 0.05))',
+                  color: 'var(--text-main)',
+                  cursor: 'pointer'
+                }}
               >
-                English 🇬🇧
-              </button>
-              <button
-                type="button"
-                onClick={() => setSelectedLang('te')}
-                className={`btn ${selectedLang === 'te' ? 'btn-primary' : 'btn-secondary'}`}
-                style={{ padding: '10px 20px', flex: 1 }}
-              >
-                తెలుగు 🇮🇳
-              </button>
+                <option value="" style={{ background: '#1e1b4b' }}>Select Gender</option>
+                <option value="Female" style={{ background: '#1e1b4b' }}>Female</option>
+                <option value="Male" style={{ background: '#1e1b4b' }}>Male</option>
+                <option value="Non-Binary" style={{ background: '#1e1b4b' }}>Non-Binary</option>
+                <option value="Prefer not to say" style={{ background: '#1e1b4b' }}>Prefer not to say</option>
+              </select>
             </div>
           </div>
 
           <button type="submit" disabled={loading} className="btn btn-primary" style={{ width: '100%', marginTop: '16px', padding: '12px' }}>
             <Save size={18} />
-            <span>{loading ? 'Saving...' : t('profile.save_changes')}</span>
+            <span>{loading ? 'Saving...' : t('profile.save_changes', 'Save Changes')}</span>
           </button>
         </form>
       </div>

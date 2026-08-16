@@ -41,6 +41,18 @@ public class User {
     @Builder.Default
     private String preferredLanguage = "en";
 
+    @Column(name = "dob", length = 20)
+    private String dob;
+
+    @Column(name = "phone_number", length = 30)
+    private String phoneNumber;
+
+    @Column(name = "gender", length = 20)
+    private String gender;
+
+    @Column(name = "profile_pic_url", length = 1000)
+    private String profilePicUrl;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

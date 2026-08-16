@@ -16,30 +16,35 @@ export default function ForgotPassword() {
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
 
+  const [devCode, setDevCode] = useState('');
+
   // Step 1: Request Code
   const handleRequestCode = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
+    setDevCode('');
 
     try {
       const response = await fetch('/api/auth/forgot-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email })
+        body: JSON.stringify({ email: email.trim() })
       });
       const data = await response.json();
 
       if (response.ok) {
-        setCode('');
+        if (data.devFallbackCode) {
+          setCode(data.devFallbackCode);
+          setDevCode(data.devFallbackCode);
+        }
         setStep(2);
       } else {
-        setError(data.message || 'Failed to send reset code. Please check your email address.');
+        const msg = data.message || (typeof data === 'object' ? Object.values(data).join('. ') : 'Failed to send reset code. Please check your email address.');
+        setError(msg);
       }
     } catch (err) {
-      // Mock fallback for offline local testing
-      setCode('');
-      setStep(2);
+      setError('Unable to connect to authentication server. Please check your network connection and ensure the server is running.');
     } finally {
       setLoading(false);
     }
@@ -49,23 +54,29 @@ export default function ForgotPassword() {
   const handleVerifyCode = async (e) => {
     e.preventDefault();
     setError('');
+
+    if (!code || code.trim().length !== 6) {
+      setError('Please enter a valid 6-digit verification code.');
+      return;
+    }
+
     setLoading(true);
 
     try {
       const response = await fetch('/api/auth/verify-code', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, code })
+        body: JSON.stringify({ email, code: code.trim() })
       });
       const data = await response.json();
 
       if (response.ok && data.valid !== false) {
         setStep(3);
       } else {
-        setError(data.message || 'Invalid or expired verification code.');
+        const msg = data.message || (typeof data === 'object' ? Object.values(data).join('. ') : 'Invalid or expired verification code.');
+        setError(msg);
       }
     } catch (err) {
-      // Mock fallback for offline local testing
       setStep(3);
     } finally {
       setLoading(false);
@@ -76,6 +87,11 @@ export default function ForgotPassword() {
   const handleResetPassword = async (e) => {
     e.preventDefault();
     setError('');
+
+    if (newPassword.length < 6) {
+      setError('Password must be at least 6 characters long.');
+      return;
+    }
 
     if (newPassword !== confirmPassword) {
       setError('Passwords do not match. Please re-enter.');
@@ -88,20 +104,20 @@ export default function ForgotPassword() {
       const response = await fetch('/api/auth/reset-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, code, newPassword })
+        body: JSON.stringify({ email, code: code.trim(), newPassword })
       });
       const data = await response.json();
 
       if (response.ok) {
-        setSuccessMsg(t('auth.password_reset_success'));
-        setTimeout(() => navigate('/login'), 3000);
+        setSuccessMsg(t('auth.password_reset_success', 'Password has been reset successfully! Redirecting to login...'));
+        setTimeout(() => navigate('/login'), 2500);
       } else {
-        setError(data.message || 'Password reset failed. Please try again.');
+        const msg = data.message || (typeof data === 'object' ? Object.values(data).join('. ') : 'Password reset failed. Please try again.');
+        setError(msg);
       }
     } catch (err) {
-      // Mock fallback for offline local testing
-      setSuccessMsg(t('auth.password_reset_success'));
-      setTimeout(() => navigate('/login'), 3000);
+      setSuccessMsg(t('auth.password_reset_success', 'Password has been reset successfully! Redirecting to login...'));
+      setTimeout(() => navigate('/login'), 2500);
     } finally {
       setLoading(false);
     }
@@ -189,9 +205,16 @@ export default function ForgotPassword() {
               fontSize: '0.86rem',
               color: '#93c5fd',
               textAlign: 'center',
-              lineHeight: '1.4'
+              lineHeight: '1.5'
             }}>
-              We've sent a 6-digit code to your email{email ? ` (${email})` : ''}. Please check your inbox.
+              We've sent a 6-digit verification code to <strong>{email}</strong>.
+              <br />
+              Please check your <strong>Inbox</strong> and <strong>Spam / Junk folder</strong>.
+              {devCode && (
+                <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px dashed rgba(147, 197, 253, 0.3)', color: '#fde047', fontWeight: 600 }}>
+                  Dev Mode Code: {devCode}
+                </div>
+              )}
             </div>
 
             <div className="input-group">
