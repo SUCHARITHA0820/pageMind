@@ -6,7 +6,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from agent import run_agent
 
-def main():
+def test_followup_pipeline():
     session_id = "test_session_101"
     print("==================================================================")
     print("TEST 1: Initial Request ('I am feeling sad and overwhelmed')")
@@ -81,6 +81,9 @@ def main():
     print("\n==================================================================")
     print("ALL TESTS PASSED SUCCESSFULLY!")
     print("==================================================================")
+
+def main():
+    test_followup_pipeline()
 
 if __name__ == "__main__":
     main()

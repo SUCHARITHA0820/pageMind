@@ -68,7 +68,7 @@ def retrieve_books_by_genres(genres: List[str]) -> List[Dict[str, Any]]:
     db_host = os.getenv("DB_HOST", "localhost")
     db_port = int(os.getenv("DB_PORT", "3306"))
     db_user = os.getenv("DB_USER", os.getenv("DB_USERNAME", "root"))
-    db_pass = os.getenv("DB_PASSWORD", "Suchi@520")
+    db_pass = os.getenv("DB_PASSWORD", os.getenv("MYSQL_PASSWORD", ""))
     db_name = os.getenv("DB_NAME", "pagemind")
 
     if pymysql is not None and genres:

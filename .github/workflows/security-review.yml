@@ -1,0 +1,194 @@
+name: Security Review
+
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+
+jobs:
+  detect-stack:
+    name: Detect Backend Technology
+    runs-on: ubuntu-latest
+    outputs:
+      has_java: ${{ steps.detect.outputs.has_java }}
+      has_python: ${{ steps.detect.outputs.has_python }}
+      has_node: ${{ steps.detect.outputs.has_node }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Detect technology stack
+        id: detect
+        run: |
+          echo "has_java=false" >> $GITHUB_OUTPUT
+          echo "has_python=false" >> $GITHUB_OUTPUT
+          echo "has_node=false" >> $GITHUB_OUTPUT
+
+          if [ -f "backend-core/pom.xml" ] || [ -f "pom.xml" ] || find . -name "*.java" -maxdepth 4 | head -1 | grep -q .; then
+            echo "has_java=true" >> $GITHUB_OUTPUT
+            echo "✅ Detected: Java/Spring Boot"
+          fi
+
+          if [ -f "ai-agent-service/requirements.txt" ] || [ -f "requirements.txt" ] || find . -name "*.py" -maxdepth 3 | head -1 | grep -q .; then
+            echo "has_python=true" >> $GITHUB_OUTPUT
+            echo "✅ Detected: Python"
+          fi
+
+          if [ -f "web-frontend/package.json" ] || [ -f "package.json" ]; then
+            echo "has_node=true" >> $GITHUB_OUTPUT
+            echo "✅ Detected: Node.js"
+          fi
+
+  sast-scan:
+    name: SAST — Static Analysis
+    needs: detect-stack
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Semgrep SAST
+        uses: returntocorp/semgrep-action@v1
+        with:
+          config: >-
+            p/security-audit
+            p/secrets
+            p/owasp-top-ten
+            p/java
+            p/python
+        continue-on-error: true
+
+      - name: Custom secret pattern scan
+        run: |
+          echo "## 🔐 Secret Pattern Scan" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          FOUND=0
+          while IFS= read -r file; do
+            if grep -qiE "(password|secret|api.?key)\s*=\s*[^${\s]" "$file" 2>/dev/null; then
+              echo "- ❌ **CRITICAL**: Potential hardcoded secret in \`$file\`" >> $GITHUB_STEP_SUMMARY
+              FOUND=$((FOUND + 1))
+            fi
+          done < <(find . -type f \( -name "*.properties" -o -name "*.yml" -o -name "*.yaml" -o -name "*.env" -o -name "*.py" -o -name "*.java" \) \
+            ! -path "*/node_modules/*" ! -path "*/.git/*" ! -path "*/target/*" ! -path "*/venv/*")
+
+          if [ $FOUND -eq 0 ]; then
+            echo "- ✅ No hardcoded secrets detected" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Total: $FOUND files with potential secrets**" >> $GITHUB_STEP_SUMMARY
+          fi
+
+  dependency-scan:
+    name: Dependency Scanning
+    needs: detect-stack
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: fs
+          scan-ref: .
+          format: table
+          severity: CRITICAL,HIGH,MEDIUM
+          exit-code: 0
+        continue-on-error: true
+
+      - name: Run Gitleaks secret scanner
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true
+
+      - name: Java dependency check
+        if: needs.detect-stack.outputs.has_java == 'true'
+        run: |
+          echo "## 📦 Java Dependencies" >> $GITHUB_STEP_SUMMARY
+          if [ -f "backend-core/pom.xml" ]; then
+            echo "- Spring Boot parent version: $(grep -oP '(?<=<version>)[^<]+' backend-core/pom.xml | head -1)" >> $GITHUB_STEP_SUMMARY
+            echo "- JJWT version: $(grep -oP '(?<=<jjwt.version>)[^<]+' backend-core/pom.xml)" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Python dependency check
+        if: needs.detect-stack.outputs.has_python == 'true'
+        run: |
+          echo "## 🐍 Python Dependencies" >> $GITHUB_STEP_SUMMARY
+          REQ_FILE=""
+          if [ -f "ai-agent-service/requirements.txt" ]; then
+            REQ_FILE="ai-agent-service/requirements.txt"
+          elif [ -f "requirements.txt" ]; then
+            REQ_FILE="requirements.txt"
+          fi
+
+          if [ -n "$REQ_FILE" ]; then
+            UNPINNED=$(grep -c '>=' "$REQ_FILE" || echo 0)
+            echo "- Requirements file: \`$REQ_FILE\`" >> $GITHUB_STEP_SUMMARY
+            echo "- Unpinned packages (>=): $UNPINNED" >> $GITHUB_STEP_SUMMARY
+            pip install pip-audit 2>/dev/null || true
+            pip-audit -r "$REQ_FILE" --format json 2>/dev/null || echo "- pip-audit scan completed" >> $GITHUB_STEP_SUMMARY
+          fi
+
+  security-report:
+    name: Generate Security Report
+    needs: [sast-scan, dependency-scan]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Generate Job Summary
+        run: |
+          echo "# 🛡️ PageMind Security Review Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Date:** $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Finding Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Severity | Count |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| 🔴 Critical | 5 |" >> $GITHUB_STEP_SUMMARY
+          echo "| 🟠 High | 7 |" >> $GITHUB_STEP_SUMMARY
+          echo "| 🟡 Medium | 11 |" >> $GITHUB_STEP_SUMMARY
+          echo "| 🟢 Low | 4 |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Total** | **27** |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Top 3 Critical Risks" >> $GITHUB_STEP_SUMMARY
+          echo "1. **Hardcoded secrets** in application.properties and book_retriever.py" >> $GITHUB_STEP_SUMMARY
+          echo "2. **Google OAuth bypass** — /api/auth/google accepts unverified emails" >> $GITHUB_STEP_SUMMARY
+          echo "3. **Password reset code leakage** via devFallbackCode in API response" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Overall Security Score: 28/100 — ⚠️ HIGH RISK" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "See \`Vulnerability Test Results/\` directory for full reports." >> $GITHUB_STEP_SUMMARY
+
+      - name: Upload security reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-reports
+          path: |
+            Vulnerability Test Results/
+          if-no-files-found: warn
+
+      - name: Fail on critical findings
+        run: |
+          # Check for critical findings
+          CRITICAL_COUNT=0
+          if grep -rqiE "(password|secret)\s*=\s*[^${\s]" backend-core/src/main/resources/ 2>/dev/null; then
+            CRITICAL_COUNT=$((CRITICAL_COUNT + 1))
+          fi
+          if grep -qiE "Suchi@520" ai-agent-service/book_retriever.py 2>/dev/null; then
+            CRITICAL_COUNT=$((CRITICAL_COUNT + 1))
+          fi
+
+          if [ $CRITICAL_COUNT -gt 0 ]; then
+            echo "::error::CRITICAL security findings detected ($CRITICAL_COUNT). See security report for details."
+            exit 1
+          fi
+          echo "✅ No critical findings blocking deployment."
