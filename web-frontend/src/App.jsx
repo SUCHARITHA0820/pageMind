@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Navbar from './components/Navbar';
@@ -9,6 +9,7 @@ import ForgotPassword from './pages/ForgotPassword';
 import LanguageSelect from './pages/LanguageSelect';
 import Chatbot from './pages/Chatbot';
 import Profile from './pages/Profile';
+import Settings from './pages/Settings';
 import BookDetails from './pages/BookDetails';
 import SearchBooks from './pages/SearchBooks';
 import OAuth2RedirectHandler from './pages/OAuth2RedirectHandler';
@@ -33,6 +34,15 @@ function PublicOnlyRoute({ children }) {
 }
 
 export default function App() {
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('pagemind_theme');
+    if (savedTheme === 'light') {
+      document.body.classList.add('light-theme');
+    } else {
+      document.body.classList.remove('light-theme');
+    }
+  }, []);
+
   return (
     <AuthProvider>
       <BrowserRouter>
@@ -50,6 +60,7 @@ export default function App() {
               <Route path="/language-select" element={<LanguageSelect />} />
               <Route path="/chatbot" element={<Chatbot />} />
               <Route path="/profile" element={<Profile />} />
+              <Route path="/settings" element={<Settings />} />
               <Route path="/books/:id" element={<BookDetails />} />
             </Routes>
           </div>

@@ -19,6 +19,45 @@
   --shadow-card: 0 10px 30px rgba(0, 0, 0, 0.4);
 }
 
+body.light-theme {
+  --bg-dark: #f8fafc;
+  --bg-surface: #ffffff;
+  --card-bg: rgba(255, 255, 255, 0.9);
+  --card-border: rgba(0, 0, 0, 0.12);
+  --primary-violet: #4f46e5;
+  --primary-hover: #4338ca;
+  --accent-cyan: #0284c7;
+  --accent-pink: #db2777;
+  --text-main: #0f172a;
+  --text-muted: #64748b;
+  --border-subtle: rgba(0, 0, 0, 0.08);
+  --shadow-glow: 0 0 25px rgba(79, 70, 229, 0.15);
+  --shadow-card: 0 10px 25px rgba(0, 0, 0, 0.05);
+
+  background-color: #f8fafc;
+  color: #0f172a;
+  background-image: 
+    radial-gradient(circle at 15% 15%, rgba(99, 102, 241, 0.08) 0%, transparent 40%),
+    radial-gradient(circle at 85% 85%, rgba(6, 182, 212, 0.08) 0%, transparent 40%);
+}
+
+body.light-theme .input-field {
+  background: rgba(255, 255, 255, 0.95);
+  color: #0f172a;
+  border-color: rgba(0, 0, 0, 0.15);
+}
+
+body.light-theme .chat-bubble-agent {
+  background: rgba(255, 255, 255, 0.95);
+  color: #0f172a;
+  border-color: rgba(0, 0, 0, 0.1);
+}
+
+body.light-theme .chat-book-card {
+  background: rgba(241, 245, 249, 0.95);
+  border-color: rgba(0, 0, 0, 0.1);
+}
+
 * {
   margin: 0;
   padding: 0;

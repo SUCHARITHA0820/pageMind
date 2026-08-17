@@ -2,7 +2,7 @@ import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
-import { BookOpen, Bot, User, LogOut, LogIn, Search } from 'lucide-react';
+import { BookOpen, Bot, User, LogOut, LogIn, Search, Settings } from 'lucide-react';
 
 export default function Navbar() {
   const { t } = useTranslation();
@@ -89,6 +89,11 @@ export default function Navbar() {
               👤
             </span>
             <span>{t('nav.profile', 'Profile')}</span>
+          </Link>
+
+          <Link to="/settings" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.95rem', fontWeight: 500 }}>
+            <Settings size={16} />
+            <span>{t('nav.settings', 'Settings')}</span>
           </Link>
 
           {/* Auth Action Buttons */}

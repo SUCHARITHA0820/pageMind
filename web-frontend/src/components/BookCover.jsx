@@ -85,6 +85,7 @@ export default function BookCover({
         <img
           src={rawUrl}
           alt={actualTitle}
+          loading="lazy"
           style={{
             width: '100%',
             height: '100%',
@@ -96,7 +97,7 @@ export default function BookCover({
       ) : (
         <div
           style={{
-            padding: '12px',
+            padding: '8px',
             width: '100%',
             height: '100%',
             display: 'flex',
@@ -109,53 +110,50 @@ export default function BookCover({
         >
           <div
             style={{
-              width: '36px',
-              height: '36px',
+              width: '28px',
+              height: '28px',
               borderRadius: '50%',
-              background: 'rgba(255, 255, 255, 0.1)',
+              background: 'rgba(255, 255, 255, 0.15)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              marginBottom: '8px',
-              border: '1px solid rgba(255, 255, 255, 0.2)'
+              marginBottom: '4px',
+              border: '1px solid rgba(255, 255, 255, 0.25)',
+              flexShrink: 0
             }}
           >
-            <BookOpen size={20} color="#a5b4fc" />
+            <BookOpen size={16} color="#a5b4fc" />
           </div>
-          {showTitleFallback && (
-            <>
-              <h5
-                style={{
-                  fontSize: '0.82rem',
-                  fontWeight: 700,
-                  color: '#f8fafc',
-                  margin: '0 0 4px 0',
-                  lineHeight: '1.25',
-                  display: '-webkit-box',
-                  WebkitLineClamp: 3,
-                  WebkitBoxOrient: 'vertical',
-                  overflow: 'hidden'
-                }}
-              >
-                {actualTitle}
-              </h5>
-              {actualAuthor && (
-                <p
-                  style={{
-                    color: '#06b6d4',
-                    fontSize: '0.72rem',
-                    margin: 0,
-                    fontWeight: 500,
-                    display: '-webkit-box',
-                    WebkitLineClamp: 1,
-                    WebkitBoxOrient: 'vertical',
-                    overflow: 'hidden'
-                  }}
-                >
-                  {actualAuthor}
-                </p>
-              )}
-            </>
+          <h5
+            style={{
+              fontSize: '0.75rem',
+              fontWeight: 700,
+              color: '#f8fafc',
+              margin: '0 0 2px 0',
+              lineHeight: '1.2',
+              display: '-webkit-box',
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: 'vertical',
+              overflow: 'hidden'
+            }}
+          >
+            {actualTitle}
+          </h5>
+          {actualAuthor && (
+            <p
+              style={{
+                color: '#06b6d4',
+                fontSize: '0.68rem',
+                margin: 0,
+                fontWeight: 500,
+                display: '-webkit-box',
+                WebkitLineClamp: 1,
+                WebkitBoxOrient: 'vertical',
+                overflow: 'hidden'
+              }}
+            >
+              {actualAuthor}
+            </p>
           )}
         </div>
       )}

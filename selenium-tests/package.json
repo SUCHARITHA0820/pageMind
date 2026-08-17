@@ -1,0 +1,19 @@
+{
+  "name": "pagemind-selenium-tests",
+  "version": "1.0.0",
+  "description": "Selenium Web Frontend E2E Test Suite for PageMind Platform",
+  "main": "tests/login-tests.js",
+  "scripts": {
+    "test": "mocha tests/login-tests.js --timeout 60000",
+    "report": "python generate_test_report.py"
+  },
+  "dependencies": {
+    "selenium-webdriver": "^4.18.0",
+    "chromedriver": "^122.0.0",
+    "geckodriver": "^4.3.0"
+  },
+  "devDependencies": {
+    "mocha": "^10.3.0",
+    "chai": "^4.4.1"
+  }
+}

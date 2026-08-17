@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
-import { User as UserIcon, Heart, Save, Edit3, BookOpen, LogIn, UserPlus, Sparkles, Mail, Phone, Calendar, UserCheck, Camera, X } from 'lucide-react';
+import { User as UserIcon, Heart, Save, Edit3, BookOpen, LogIn, UserPlus, Sparkles, Mail, Phone, Calendar, UserCheck, Camera, X, Settings } from 'lucide-react';
 import BookCover from '../components/BookCover';
 
 export default function Profile() {
@@ -115,9 +115,15 @@ export default function Profile() {
 
   return (
     <div className="container page-container" style={{ maxWidth: '820px' }}>
-      <h1 style={{ fontSize: '2.2rem', fontWeight: 800, marginBottom: '24px' }} className="gradient-text">
-        {t('profile.title', 'User Profile')}
-      </h1>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+        <h1 style={{ fontSize: '2.2rem', fontWeight: 800, margin: 0 }} className="gradient-text">
+          {t('profile.title', 'User Profile')}
+        </h1>
+        <Link to="/settings" className="btn btn-secondary" style={{ padding: '8px 16px', fontSize: '0.88rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Settings size={16} color="var(--accent-cyan)" />
+          <span>{t('nav.settings', 'App Settings')}</span>
+        </Link>
+      </div>
 
       {!user && (
         <div className="glass-card" style={{ padding: '24px', marginBottom: '24px', borderLeft: '4px solid var(--accent-cyan)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
